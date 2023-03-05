@@ -1,0 +1,202 @@
+
+directive plot  K2_PP() (* variables that whose data would be saved and further plotted*)
+rerere
+
+(*Stage 1 channel definitions*)
+
+(*defining channels corresponding to three different processes in Stage1: bind, unbind and react*)
+(*For the phosphorylation process*)
+new bind1_stage1@0.003 : chan               (*k1*)
+new unbind1_stage1@150.0 : chan           (*k_-1*)
+new react1_stage1@150.0 : chan            (*k2*)
+
+(*For the de-phosphorylation process*)
+new bind1phos_stage1@0.003 :chan            (*kp1*) 
+new unbind1phos_stage1@150.0 :chan        (*kp_-1*)
+new react1phos_stage1@150.0 :chan         (*kp2*)
+
+
+
+(*Stage2 channel definitions*)
+
+(*defining channels corresponding to three different processes in Stage2: bind, unbind and react*)
+
+(*For the double phosphorylation process*)
+new bind1_stage2@0.003 : chan               (*k3*)
+new unbind1_stage2@150.0 : chan           (*k_-3*)
+new react1_stage2@150.0 : chan            (*k4*)
+new bind2_stage2@0.003 :chan                (*k5*)
+new unbind2_stage2@150.0 :chan            (*k_-5*)
+new react2_stage2@150.0 :chan             (*k6*)
+
+(*For the double de-phosphorylation process*)
+new bind1phos_stage2@0.003 : chan           (*kp3*)
+new unbind1phos_stage2@150.0 : chan       (*kp-3*)
+new react1phos_stage2@150.0 : chan        (*kp4*)
+new bind2phos_stage2@0.003 :chan             (*kp5*)
+new unbind2phos_stage2@150.0 :chan         (*kp_-5*)
+new react2phos_stage2@150.0 :chan          (*kp5*)
+
+
+
+
+(*Stage3 channel definitions*)
+
+(*defining channels corresponding to three different processes in Stage3: bind, unbind and react*)
+
+(*For the double phosphorylation process*)
+
+new bind1_stage3@0.003 : chan                (*k7*)
+new unbind1_stage3@150.0 : chan            (*k_-7*)
+new react1_stage3@150.0 : chan             (*k8*)
+new bind2_stage3@0.003 :chan                 (*k9*)
+new unbind2_stage3@150.0 :chan             (*k_-9*)
+new react2_stage3@150.0 :chan              (*k10*)
+
+(*For the double de-phosphorylation process*)
+
+new bind1phos_stage3@0.003 : chan            (*kp7*)
+new unbind1phos_stage3@150.0 : chan        (*kp_-7*)
+new react1phos_stage3@150.0 : chan         (*kp8*) 
+new bind2phos_stage3@0.003 :chan             (*kp9*)
+new unbind2phos_stage3@150.0 :chan         (*kp_-9*)
+new react2phos_stage3@150.0 :chan          (*kp10*)
+
+
+
+(*---------------------------------------------------------*)
+(*Stage 1*)
+
+(*Defining the dynamics of the signalling molecule which acts as an enzyme to the 
+phosphorylation reaction occuring at the first stage*)
+
+let E() = !bind1_stage1; ES()
+and ES()= 
+do !unbind1_stage1; E()
+or !react1_stage1; E()
+
+(*Defining the dynamics of the phosphatase which acts as an enzyme to the 
+de-phosphorylation reaction occuring at the first stage*)
+
+let E_p()= !bind1phos_stage1; E_pP()
+and E_pP()=
+do !unbind1phos_stage1; E_p()
+or !react1phos_stage1; E_p()
+
+
+
+(*Connecting Stage1 to Stage2*)
+
+(*Defining the dynamics of the MAP3K protein which acts as substrate to the 
+phosphorylation-dephosphorylation reaction occuring at the first stage*)
+
+let S()= ?bind1_stage1; SE()
+and SE()=
+do ?unbind1_stage1; S()
+or ?react1_stage1; P()
+and P()=                         (*Defining the single phsophorylated protein that acts as a signal to the second stage*)
+   do ?bind1phos_stage1; PE_p()
+    or !bind1_stage2; E2_K()
+    or !bind2_stage2; E2_K_P()
+   and E2_K()= 
+   do !unbind1_stage2; P()
+    or !react1_stage2; P()
+    and E2_K_P()=
+    do !unbind2_stage2; P()
+    or !react2_stage2; P()
+
+and PE_p()=
+ do ?unbind1phos_stage1; P()
+ or ?react1phos_stage1; S()
+ 
+
+(*-----------------------------------------------------------------*)
+(*Stage 2*)
+
+(*Defining the dynamics of the phosphatase which acts as an enzyme to the 
+de-phosphorylation reaction occuring at the second stage*)
+
+let E2_p() = 
+
+do !bind1phos_stage2; E2_p_K_P()
+or !bind2phos_stage2; E2_p_K_PP()
+and E2_p_K_P()= 
+ do !unbind1phos_stage2; E2_p()
+ or !react1phos_stage2; E2_p()
+and E2_p_K_PP()=
+ do !unbind2phos_stage2; E2_p()
+ or !react2phos_stage2; E2_p()
+
+
+(*Connecting stage 2 to stage 3*)
+
+(*Defining the dynamics of MAP2K protein belonging to the second stage*)
+
+let K()= ?bind1_stage2; K_E2()
+and K_E2()=
+do ?unbind1_stage2; K()
+or ?react1_stage2; K_P()
+and K_P()=
+  do ?bind2_stage2; K_P_E2()
+  or ?bind1phos_stage2;K_P_E2_p()
+and K_P_E2()=
+ do ?unbind2_stage2; K_P()
+or ?react2_stage2; K_PP()
+and K_P_E2_p()=
+    do ?unbind1phos_stage2; K_P()
+    or ? react1phos_stage2;K()
+and K_PP()=                                 (*Defining the dynamics of double-phosphorylated protein which acts as an signal to the third stage*)
+         do ?bind2phos_stage2; K_PP_E2_P()
+         or !bind1_stage3; E3_K2()
+         or !bind2_stage3; E3_K2_P()
+        and E3_K2()= 
+        do !unbind1_stage3; K_PP()
+        or !react1_stage3; K_PP()
+        and E3_K2_P()=
+        do !unbind2_stage3; K_PP()
+        or !react2_stage3; K_PP()
+and K_PP_E2_P()=
+ do ?unbind2phos_stage2; K_PP()
+ or ?react2phos_stage2; K_P()
+
+(*----------------------------------------------------------------*)
+
+(*Stage 3*)
+
+(*Defining the dynamics of MAPK protein belonging to the third stage*)
+
+let K2()= ?bind1_stage3; K2_E3()
+and K2_E3()=
+do ?unbind1_stage3; K2()
+or ?react1_stage3; K2_P()
+and K2_P()=
+  do ?bind2_stage3; K2_P_E3()
+  or ?bind1phos_stage3;K2_P_E3_p()
+and K2_P_E3()=
+ do ?unbind2_stage3; K2_P()
+or ?react2_stage3; K2_PP()
+and K2_P_E3_p()=
+    do ?unbind1phos_stage3; K2_P()
+    or ? react1phos_stage3;K2()
+and K2_PP()= ?bind2phos_stage3; K2_PP_E3_P()
+and K2_PP_E3_P()=
+ do ?unbind2phos_stage3; K2_PP()
+ or ?react2phos_stage3; K2_P()
+
+(*Defining the dynamics of the phosphatase3 which acts as an enzyme to the 
+de-phosphorylation reaction occuring at the third stage*)
+
+let E3_p() = 
+
+do !bind1phos_stage3; E3_p_K2_P()
+or !bind2phos_stage3; E3_p_K2_PP()
+and E3_p_K2_P()= 
+ do !unbind1phos_stage3; E3_p()
+ or !react1phos_stage3; E3_p()
+and E3_p_K2_PP()=
+ do !unbind2phos_stage3; E3_p()
+ or !react2phos_stage3; E3_p()
+
+
+
+
