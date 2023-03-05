@@ -1,6 +1,6 @@
 
 directive plot  K2_PP() (* variables that whose data would be saved and further plotted*)
-rerere
+
 
 (*Stage 1 channel definitions*)
 
